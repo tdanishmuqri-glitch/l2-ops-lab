@@ -1,0 +1,237 @@
+{
+  "info": {
+    "name": "AuthentiScan - L2 smoke tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Run after every deployment. CLI: newman run postman/authentiscan.postman_collection.json -e postman/local.postman_environment.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "header": []
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('DB up', () => pm.expect(pm.response.json().db).to.eql('up'));",
+              "pm.test('Fast (<500ms)', () => pm.expect(pm.response.responseTime).to.be.below(500));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Version",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/version",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "version"
+          ]
+        },
+        "header": []
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Expected version deployed', () => pm.expect(pm.response.json().version).to.eql(pm.environment.get('expectedVersion')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify - genuine",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/verify",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "verify"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"code\": \"SPX-1001\", \"country\": \"MY\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Genuine', () => pm.expect(pm.response.json().result).to.eql('genuine'));",
+              "pm.test('Has request id header', () => pm.response.to.have.header('X-Request-ID'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify - revoked",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/verify",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "verify"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"code\": \"SPX-2002\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Revoked', () => pm.expect(pm.response.json().result).to.eql('revoked'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify - counterfeit",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/verify",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "verify"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"code\": \"FAKE-123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Unknown', () => pm.expect(pm.response.json().result).to.eql('unknown'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verify - missing code (negative)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseUrl}}/verify",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "verify"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/metrics",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "metrics"
+          ]
+        },
+        "header": []
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Prometheus metrics exposed', () => pm.expect(pm.response.text()).to.include('authentiscan_requests_total'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

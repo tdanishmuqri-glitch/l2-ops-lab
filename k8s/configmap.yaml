@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authentiscan-config
+  namespace: authentiscan
+data:
+  KAFKA_BOOTSTRAP: "kafka.authentiscan.svc:9092"
+  KAFKA_TOPIC: "scan-events"
+  FAULT_MODE: "none"          # change + roll out to reproduce incidents
+---
+# In a real cluster this comes from AWS Secrets Manager / External Secrets, never git.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentiscan-db
+  namespace: authentiscan
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://ops:ops@postgres.authentiscan.svc:5432/authentiscan"

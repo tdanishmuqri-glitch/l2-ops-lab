@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentiscan
+  namespace: authentiscan
+  labels: { app: authentiscan }
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5          # keeps old ReplicaSets so `kubectl rollout undo` works
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }   # zero-downtime upgrade
+  selector:
+    matchLabels: { app: authentiscan }
+  template:
+    metadata:
+      labels: { app: authentiscan }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/tdanishmuqri-glitch/authentiscan:1.0.0
+          ports: [{ containerPort: 8080 }]
+          envFrom:
+            - configMapRef: { name: authentiscan-config }
+            - secretRef: { name: authentiscan-db }
+          env:
+            - name: APP_VERSION
+              value: "1.0.0"
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 256Mi }
+          readinessProbe:            # pod gets no traffic until DB is reachable
+            httpGet: { path: /health, port: 8080 }
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:             # restart if the process hangs
+            httpGet: { path: /version, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10

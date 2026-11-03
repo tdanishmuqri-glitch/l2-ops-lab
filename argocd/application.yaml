@@ -1,0 +1,22 @@
+# GitOps: ArgoCD watches the k8s/ folder in git. A "deployment of a new version" is a
+# git commit that changes the image tag; ArgoCD syncs it to the cluster.
+# Rollback = revert the commit (or `argocd app rollback authentiscan <history-id>`).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: authentiscan
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/tdanishmuqri-glitch/l2-ops-lab.git
+    targetRevision: main
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: authentiscan
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true      # someone `kubectl edit`s prod by hand -> ArgoCD reverts the drift
+    syncOptions: [CreateNamespace=true]
